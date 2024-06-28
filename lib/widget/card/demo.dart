@@ -29,13 +29,13 @@ void main()  {
 
 
   TemplateCard templateCard = TemplateCard()
-  ..child=customBoard
+  // ..child=customBoard
 
-  ..listenerRegister.addListener(ListenerType.onPointerMove, NoteButtonAction.leftButton, (event) {
-
+  ..listenerRegister.pointerScrollEvent((event) {
+    print(event.scrollDelta);
     })
-    ..listenerRegister.addListener(ListenerType.onPointerMove, NoteButtonAction.leftButton, (event) {
-
+    ..listenerRegister.pointerUpEvent((event) {
+      print(event.buttons);
     })
   ..eventHandlerList.add(revokeHandler);
 

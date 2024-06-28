@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/src/foundation/diagnostics.dart';
@@ -10,6 +11,7 @@ import '../note_action.dart';
 
 interface class InterFaceControllableWidget {
   late Offset scrollOffset;
+  FocusNode focusNode = FocusNode();
   InterFaceControllableWidget? fatherWidget;
   Widget? child;
   Color? color;
@@ -21,9 +23,10 @@ interface class InterFaceControllableWidget {
   double? height;
   double? width;
   String? name;
+
   late ListenerRegisterHandler listenerRegister;
   late List<EventRegisterHandler> eventHandlerList;
-  // void Function()? callRefresh;
+
 }
 
 typedef ListenerAction = NoteButtonAction;
@@ -40,8 +43,28 @@ enum ListenerType {
   onPointerSignal,
 }
 
+class CustomPointerUpEvent extends PointerEvent {
+  int buttons = 0;
+  void setLastButton(int newBtn) {
+    buttons = newBtn;
+  }
+
+  @override
+  PointerEvent copyWith({int? viewId, Duration? timeStamp, int? pointer, PointerDeviceKind? kind, int? device, Offset? position, Offset? delta, int? buttons, bool? obscured, double? pressure, double? pressureMin, double? pressureMax, double? distance, double? distanceMax, double? size, double? radiusMajor, double? radiusMinor, double? radiusMin, double? radiusMax, double? orientation, double? tilt, bool? synthesized, int? embedderId}) {
+    // TODO: implement copyWith
+    throw UnimplementedError();
+  }
+
+  @override
+  PointerEvent transformed(Matrix4? transform) {
+    // TODO: implement transformed
+    throw UnimplementedError();
+  }
+}
+
 class EventRegisterHandler {
   late LogicalKeyboardKey _keyBind;
+  bool _anyKeyCanTrigger = false;
   bool _onKeyUp = false;
   bool _onKeyDown = true;
   bool isAltPressed = false;
@@ -50,13 +73,24 @@ class EventRegisterHandler {
   bool isShiftPressed = false;
   void Function() _event = () {};
 
-  EventRegisterHandler(LogicalKeyboardKey key) {
-    _keyBind = key;
-    setOnlyKeyDownAlive();
+  
+  
+  EventRegisterHandler([LogicalKeyboardKey? key]) {
+    if (key!=null) {
+      _keyBind = key;
+      setOnlyKeyDownAlive();
+    } else {
+      _anyKeyCanTrigger = true;
+    }
+
   }
 
   setHandler(void Function() handlerEvent) {
     _event = handlerEvent;
+  }
+
+  setAnyKeyCanTrigger(bool anyKeyCanTrigger) {
+    _anyKeyCanTrigger = anyKeyCanTrigger;
   }
 
   setBothKeyAlive() {
@@ -80,7 +114,10 @@ class EventRegisterHandler {
   }
 
   run(RawKeyEvent event) {
-    if (event.logicalKey == _keyBind){
+    if (_anyKeyCanTrigger) {
+      _event.call();
+    }
+    else if (event.logicalKey == _keyBind){
       if ((event is RawKeyDownEvent) && _onKeyDown){
         _event.call();
       }
@@ -91,69 +128,34 @@ class EventRegisterHandler {
 
   }
 
-
-  // addKey(LogicalKeyboardKey key) {
-  //   _keyBinds.add(key);
-  // }
-  // addKeys(List<LogicalKeyboardKey> keyList) {
-  //   _keyBinds.addAll(keyList);
-  // }
-  //
-  // clearKeyBind() {
-  //   _keyBinds = [];
-  // }
-
-
-
-
-
-  // runWithMatch(RawKeyEvent event)  {
-  //   if (isMatch(event)){
-  //     run();
-  //   }
-  // }
-  //
-  // bool isMatch(RawKeyEvent event){
-  //   if ((event is RawKeyDownEvent && !_onKeyDown)||(event is RawKeyUpEvent && !_onKeyUp)){
-  //     return false;
-  //   }
-  //   if (_keyBinds.contains(event.logicalKey)){
-  //     bool matched = true;
-  //     for (var element in _keyBinds) {
-  //       if (!event.isKeyPressed(element)){
-  //         matched = false;
-  //         break;
-  //       }
-  //     }
-  //     if (matched){
-  //       print(getDescription());
-  //     }
-  //     return matched;
-  //   } else {
-  //     return false;
-  //   }
-  //
-  // }
-
-  // String getDescription() {
-  //   var description = "";
-  //   var at = 0;
-  //   var endStr = "+";
-  //   for (var element in _keyBinds) {
-  //     at ++;
-  //     if (at == _keyBinds.length){
-  //       endStr = "";
-  //     }
-  //     description+="${element.keyLabel}${endStr}";
-  //
-  //   }
-  //   return description;
-  // }
 }
 
 class ListenerRegisterHandler {
   Map<ListenerType, Map<int, List<void Function(PointerEvent event)>>>
       _listenerMap = {};
+  PointerEvent customPointerUpEvent = CustomPointerUpEvent();
+
+  void updateButton(int newBtn) {
+    customPointerUpEvent = CustomPointerUpEvent()..setLastButton(newBtn);
+  }
+
+  void clean(){
+    customPointerUpEvent = CustomPointerUpEvent();
+  }
+
+  void pointerUpEvent(void Function(PointerEvent event) listener) {
+    void Function(PointerEvent event) innerListener = (event) {
+      listener.call(customPointerUpEvent);
+    };
+      addListener(ListenerType.onPointerUp, 0, innerListener);
+  }
+
+  void pointerScrollEvent(void Function(PointerScrollEvent event) listener) {
+    void Function(PointerEvent event) innerListener = (event) {
+      listener.call(event as PointerScrollEvent);
+    };
+      addListener(ListenerType.onPointerSignal, 0, innerListener);
+  }
 
   void addListener(ListenerType listenerType, int listenerAction,
       void Function(PointerEvent event) listener) {
@@ -187,106 +189,3 @@ class ListenerRegisterHandler {
     }
   }
 }
-
-// class CustomListener extends Listener {
-//   ListenerRegister? listenerRegister;
-//   late PointerCancelEventListener pointerCancelEvent;
-//   late PointerDownEventListener pointerDownEvent;
-//
-//   CustomListener({super.key, required this.listenerRegister}){
-//     pointerCancelEvent = (event){
-//       listenerRegister?.runListenerType(ListenerType.onPointerCancel, event);
-//     };
-//     pointerDownEvent = (event){
-//       listenerRegister?.runListenerType(ListenerType.onPointerDown, event);
-//     };
-//   }
-//
-//   // @override
-//   // // TODO: implement behavior
-//   // HitTestBehavior get behavior => throw UnimplementedError();
-//   //
-//   // @override
-//   // // TODO: implement child
-//   // Widget? get child => throw UnimplementedError();
-//   //
-//   // @override
-//   // SingleChildRenderObjectElement createElement() {
-//   //   // TODO: implement createElement
-//   //   throw UnimplementedError();
-//   // }
-//   //
-//   // @override
-//   // RenderPointerListener createRenderObject(BuildContext context) {
-//   //   // TODO: implement createRenderObject
-//   //   throw UnimplementedError();
-//   // }
-//   //
-//   // @override
-//   // List<DiagnosticsNode> debugDescribeChildren() {
-//   //   // TODO: implement debugDescribeChildren
-//   //   throw UnimplementedError();
-//   // }
-//   //
-//   // @override
-//   // void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-//   //   // TODO: implement debugFillProperties
-//   // }
-//   //
-//   // @override
-//   // void didUnmountRenderObject(covariant RenderObject renderObject) {
-//   //   // TODO: implement didUnmountRenderObject
-//   // }
-//   //
-//   // @override
-//   // // TODO: implement key
-//   // Key? get key => throw UnimplementedError();
-//
-//   @override
-//   // TODO: implement onPointerCancel
-//   PointerCancelEventListener? get onPointerCancel => pointerCancelEvent;
-//
-//   @override
-//   // TODO: implement onPointerDown
-//   PointerDownEventListener? get onPointerDown => pointerDownEvent;
-//
-//   @override
-//   // TODO: implement onPointerHover
-//   PointerHoverEventListener? get onPointerHover => throw UnimplementedError();
-//
-//   @override
-//   // TODO: implement onPointerMove
-//   PointerMoveEventListener? get onPointerMove => throw UnimplementedError();
-//
-//   @override
-//   // TODO: implement onPointerPanZoomEnd
-//   PointerPanZoomEndEventListener? get onPointerPanZoomEnd => throw UnimplementedError();
-//
-//   @override
-//   // TODO: implement onPointerPanZoomStart
-//   PointerPanZoomStartEventListener? get onPointerPanZoomStart => throw UnimplementedError();
-//
-//   @override
-//   // TODO: implement onPointerPanZoomUpdate
-//   PointerPanZoomUpdateEventListener? get onPointerPanZoomUpdate => throw UnimplementedError();
-//
-//   @override
-//   // TODO: implement onPointerSignal
-//   PointerSignalEventListener? get onPointerSignal => throw UnimplementedError();
-//
-//   @override
-//   // TODO: implement onPointerUp
-//   PointerUpEventListener? get onPointerUp => throw UnimplementedError();
-//
-//   // @override
-//   // DiagnosticsNode toDiagnosticsNode({String? name, DiagnosticsTreeStyle? style}) {
-//   //   // TODO: implement toDiagnosticsNode
-//   //   throw UnimplementedError();
-//   // }
-//   //
-//   // @override
-//   // void updateRenderObject(BuildContext context, covariant RenderPointerListener renderObject) {
-//   //   // TODO: implement updateRenderObject
-//   // }
-//
-// }

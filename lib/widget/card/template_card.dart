@@ -15,6 +15,10 @@ class TemplateCard extends StatefulWidget
   @override
   State<TemplateCard> createState() => _TemplateCardState();
 
+
+  @override
+  FocusNode focusNode = FocusNode();
+
   @override
   Widget? child;
 
@@ -57,6 +61,10 @@ class TemplateCard extends StatefulWidget
   @override
   List<EventRegisterHandler> eventHandlerList = [];
 
+  
+  void requestFocus(){
+    focusNode.requestFocus();
+}
 
 }
 
@@ -76,6 +84,7 @@ class _TemplateCardState extends State<TemplateCard> {
   @override
   void initState() {
     super.initState();
+
   }
 
   @override
@@ -83,7 +92,7 @@ class _TemplateCardState extends State<TemplateCard> {
     // TODO: implement build
     // return CustomListener(listenerRegister: widget.listenerRegister,);
     return RawKeyboardListener(
-        focusNode: FocusNode(),
+        focusNode: widget.focusNode,
         onKey: (RawKeyEvent event) {
           setState(() {
             for (EventRegisterHandler element in widget.eventHandlerList) {
@@ -114,13 +123,16 @@ class _TemplateCardState extends State<TemplateCard> {
         },
         child: Listener(
             onPointerDown: (event) {
+              widget.requestFocus();
+              widget.listenerRegister.updateButton(event.buttons);
               cardRunEventByButton(ListenerType.onPointerDown, event);
             },
             onPointerMove: (event) {
               cardRunEventByButton(ListenerType.onPointerMove, event);
             },
             onPointerUp: (event) {
-              cardRunEventByButton(ListenerType.onPointerUp, event);
+              cardRunListenerType(ListenerType.onPointerUp, event);
+              widget.listenerRegister.clean();
             },
             onPointerHover: (event) {
               cardRunListenerType(ListenerType.onPointerHover, event);
@@ -148,3 +160,5 @@ class _TemplateCardState extends State<TemplateCard> {
             )));
   }
 }
+
+
