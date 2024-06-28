@@ -31,10 +31,10 @@ void main()  {
   TemplateCard templateCard = TemplateCard()
   // ..child=customBoard
 
-  ..listenerRegister.pointerScrollEvent((event) {
+  ..listenerRegister.pointerScrollListener((event) {
     print(event.scrollDelta);
     })
-    ..listenerRegister.pointerUpEvent((event) {
+    ..listenerRegister.pointerUpListener((event) {
       print(event.buttons);
     })
   ..eventHandlerList.add(revokeHandler);

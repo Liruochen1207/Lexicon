@@ -143,14 +143,14 @@ class ListenerRegisterHandler {
     customPointerUpEvent = CustomPointerUpEvent();
   }
 
-  void pointerUpEvent(void Function(PointerEvent event) listener) {
+  void pointerUpListener(void Function(PointerEvent event) listener) {
     void Function(PointerEvent event) innerListener = (event) {
       listener.call(customPointerUpEvent);
     };
       addListener(ListenerType.onPointerUp, 0, innerListener);
   }
 
-  void pointerScrollEvent(void Function(PointerScrollEvent event) listener) {
+  void pointerScrollListener(void Function(PointerScrollEvent event) listener) {
     void Function(PointerEvent event) innerListener = (event) {
       listener.call(event as PointerScrollEvent);
     };
